@@ -1,19 +1,35 @@
-html, body {
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
+body {
     margin: 0;
-    padding: 0;
-    background-color: #333; /* Optional: dark background */
+    overflow: hidden; /* Prevent scrollbars */
+    font-family: sans-serif;
+    background-color: #000; /* Fallback background */
 }
 
-#renderCanvas {
-    width: 100%;
-    height: 100%;
-    touch-action: none; /* Useful for mobile */
-    display: block; /* Ensure it takes up space */
+#gameCanvas {
+    display: block; /* Remove default inline spacing */
+    width: 100vw;
+    height: 100vh;
 }
 
-/* Sources : */
-/* 1. https://github.com/DennisOe/3D-Browser-Diorama */
-/* 2. https://medium.com/@13979318939/babylon-js-guide-1-the-first-3d-scene-37d2ddb49e1c */
+#info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+#speed-indicator {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 16px;
+}

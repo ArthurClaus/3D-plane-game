@@ -1,18 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>3D Plane Game Starter</title>
-    <link href="style.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Plane Game - Three.js</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <canvas id="renderCanvas"></canvas>
-    <script src="script.js"></script>
+    <div id="info">
+        Controls:<br/>
+        W: Accelerate | S: Decelerate<br/>
+        A/Left Arrow: Roll Left | D/Right Arrow: Roll Right<br/>
+        Up Arrow: Pitch Down | Down Arrow: Pitch Up
+    </div>
+    <div id="speed-indicator">Speed: 0</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Import Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module" src="main.js"></script>
 </body>
 </html>
-
-<!-- Sources : -->
-<!-- 1. https://github.com/DennisOe/3D-Browser-Diorama -->
-<!-- 2. https://medium.com/@13979318939/babylon-js-guide-1-the-first-3d-scene-37d2ddb49e1c -->
