@@ -4,6 +4,18 @@ import * as THREE from 'three';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB); // Sky blue background
 
+// --- Systèmes pour les ballons et les tirs ---
+const balloons = [];
+const balloonCount = 50; // Nombre de ballons à créer
+const balloonMaxHeight = 400; // Hauteur maximale des ballons
+
+// Système de projectiles
+const bullets = [];
+const bulletSpeed = 5;
+const bulletLifespan = 3; // Durée de vie en secondes
+let lastShootTime = 0;
+const shootCooldown = 200; // Cooldown de tir en millisecondes
+
 // --- Camera Setup ---
 const camera = new THREE.PerspectiveCamera(
     75, // Field of View
@@ -56,6 +68,100 @@ world.rotation.x = -Math.PI / 2; // Rotate the plane to be horizontal
 world.position.y = 0; // Set ground level at y=0
 world.receiveShadow = true; // Allow the ground to receive shadows
 scene.add(world);
+
+// --- Ballons à détruire ---
+// Fonction pour créer un ballon
+const createBalloon = (x, y, z) => {
+    const balloonGeometry = new THREE.SphereGeometry(10, 16, 16);
+    const balloonMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(
+            Math.random(),
+            Math.random(),
+            Math.random()
+        ),
+        roughness: 0.7,
+        metalness: 0.3
+    });
+    
+    const balloon = new THREE.Mesh(balloonGeometry, balloonMaterial);
+    balloon.position.set(x, y, z);
+    balloon.castShadow = true;
+    balloon.userData.isTarget = true; // Indiquer que c'est une cible
+    
+    // Créer une ficelle pour le ballon
+    const stringGeometry = new THREE.CylinderGeometry(0.5, 0.5, y, 8);
+    const stringMaterial = new THREE.MeshStandardMaterial({
+        color: 0x888888,
+        roughness: 1.0,
+        metalness: 0.0
+    });
+    
+    const string = new THREE.Mesh(stringGeometry, stringMaterial);
+    string.position.set(0, -y/2, 0);
+    balloon.add(string);
+    
+    scene.add(balloon);
+    balloons.push(balloon);
+    
+    return balloon;
+};
+
+// Fonction pour créer l'explosion d'un ballon
+const createBalloonExplosion = (position) => {
+    const particleCount = 30;
+    const particleGeometry = new THREE.SphereGeometry(0.8, 8, 8);
+    
+    for (let i = 0; i < particleCount; i++) {
+        // Utiliser la couleur en fonction de la position dans l'explosion
+        const hue = Math.random();
+        const particleMaterial = new THREE.MeshBasicMaterial({ 
+            color: new THREE.Color().setHSL(hue, 1, 0.5)
+        });
+        
+        const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+        
+        // Position initiale au point d'impact
+        particle.position.copy(position);
+        
+        // Vélocité aléatoire
+        particle.velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 5,
+            (Math.random() - 0.5) * 5,
+            (Math.random() - 0.5) * 5
+        );
+        
+        // Durée de vie aléatoire
+        particle.lifespan = Math.random() * 1 + 0.5; // 0.5-1.5 secondes
+        particle.age = 0;
+        
+        scene.add(particle);
+        explosionParticles.push(particle);
+    }
+    
+    // Jouer un son d'explosion de ballon
+    try {
+        const balloonPopSound = new Audio('https://bigsoundbank.com/UPLOAD/mp3/1499.mp3');
+        balloonPopSound.volume = 0.3;
+        balloonPopSound.loop = false; // S'assurer que le son ne joue qu'une fois
+        balloonPopSound.play().catch(e => console.log("Erreur de lecture audio:", e));
+    } catch (err) {
+        console.log("Erreur avec le son:", err);
+    }
+};
+
+// Générer des ballons à des positions aléatoires
+for (let i = 0; i < balloonCount; i++) {
+    const x = (Math.random() - 0.5) * worldSize * 0.8;
+    const y = Math.random() * (balloonMaxHeight - 50) + 50; // Entre 50 et balloonMaxHeight
+    const z = (Math.random() - 0.5) * worldSize * 0.8;
+    
+    // Éviter de placer des ballons trop près de la piste d'atterrissage
+    if (Math.abs(x) < 50 && Math.abs(z) < 200) {
+        continue; // Sauter ce ballon et en créer un autre
+    }
+    
+    createBalloon(x, y, z);
+}
 
 // --- Piste de décollage ---
 const runwayLength = 200;
@@ -262,6 +368,68 @@ plane.position.set(0, 2, runwayLength/2 - 20); // Positionner l'avion au début 
 plane.rotation.set(0, 0, 0); // Orientation initiale (nez vers l'avant)
 scene.add(plane);
 
+// --- Système de projectiles ---
+const createBullet = () => {
+    const bulletGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+    const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+    
+    // Position initiale (nez de l'avion)
+    const bulletPosition = new THREE.Vector3(0, 0, -3);
+    bulletPosition.applyMatrix4(plane.matrixWorld);
+    bullet.position.copy(bulletPosition);
+    
+    // Direction (utilise la rotation de l'avion)
+    const direction = new THREE.Vector3(0, 0, -1);
+    direction.applyQuaternion(plane.quaternion);
+    bullet.userData = {
+        direction: direction,
+        createdAt: Date.now(),
+        lifespan: bulletLifespan * 1000 // Convertir en millisecondes
+    };
+    
+    scene.add(bullet);
+    bullets.push(bullet);
+};
+
+// Fonction pour mettre à jour les projectiles
+const updateBullets = (deltaTime) => {
+    const currentTime = Date.now();
+    
+    // Mettre à jour la position de chaque projectile
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        
+        // Déplacer le projectile
+        const movement = bullet.userData.direction.clone().multiplyScalar(bulletSpeed * 25 * deltaTime);
+        bullet.position.add(movement);
+        
+        // Vérifier la durée de vie
+        if (currentTime - bullet.userData.createdAt > bullet.userData.lifespan) {
+            scene.remove(bullet);
+            bullets.splice(i, 1);
+            continue;
+        }
+        
+        // Vérifier les collisions avec les ballons
+        for (let j = balloons.length - 1; j >= 0; j--) {
+            const balloon = balloons[j];
+            const distance = bullet.position.distanceTo(balloon.position);
+            
+            if (distance < 12) { // 10 + marge de 2
+                // Ballon touché
+                createBalloonExplosion(balloon.position.clone());
+                scene.remove(balloon);
+                balloons.splice(j, 1);
+                
+                // Supprimer aussi le projectile
+                scene.remove(bullet);
+                bullets.splice(i, 1);
+                break;
+            }
+        }
+    }
+};
 
 // --- Controls ---
 const keysPressed = {};
@@ -333,6 +501,7 @@ const createExplosion = (position) => {
     try {
         explosionSound = new Audio('https://bigsoundbank.com/UPLOAD/mp3/1561.mp3');
         explosionSound.volume = 0.5;
+        explosionSound.loop = false; // S'assurer que le son ne joue qu'une fois
         explosionSound.play().catch(e => console.log("Erreur de lecture audio:", e));
     } catch (err) {
         console.log("Erreur avec le son d'explosion:", err);
@@ -511,6 +680,31 @@ const restartGame = () => {
 document.addEventListener('keydown', (event) => {
     keysPressed[event.key.toLowerCase()] = true;
     keysPressed[event.code] = true;
+    
+    // Tirer quand on appuie sur espace
+    if (event.code === 'Space') {
+        const currentTime = Date.now();
+        if (currentTime - lastShootTime > shootCooldown && !isGameOver) {
+            createBullet();
+            lastShootTime = currentTime;
+            
+            // Jouer un son de tir
+            try {
+                const shootSound = new Audio('https://bigsoundbank.com/UPLOAD/mp3/1430.mp3');
+                shootSound.volume = 0.2;
+                shootSound.loop = false; // S'assurer que le son ne joue qu'une fois
+                shootSound.play().catch(e => console.log("Erreur de lecture audio:", e));
+                
+                // Arrêter le son après 5 secondes même s'il n'est pas terminé
+                setTimeout(() => {
+                    shootSound.pause();
+                    shootSound.currentTime = 0;
+                }, 5000);
+            } catch (err) {
+                console.log("Erreur avec le son de tir:", err);
+            }
+        }
+    }
 });
 
 document.addEventListener('keyup', (event) => {
@@ -618,6 +812,9 @@ function updatePlane(deltaTime) {
         updateExplosion(deltaTime);
         return;
     }
+
+    // Mettre à jour les projectiles
+    updateBullets(deltaTime);
 
     // --- Acceleration / Deceleration ---
     if (keysPressed['w']) {
