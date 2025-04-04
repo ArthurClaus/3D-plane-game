@@ -1,19 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Plane Game - Three.js</title>
+    <title>Jeu d'Avion 3D - Three.js</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="info">
-        Controls:<br/>
-        W: Accelerate | S: Decelerate<br/>
-        A/Left Arrow: Roll Left | D/Right Arrow: Roll Right<br/>
-        Up Arrow: Pitch Down | Down Arrow: Pitch Up
+        Contrôles:<br/>
+        W: Accélérer | S: Décélérer<br/>
+        A/Flèche Gauche: Tourner à gauche | D/Flèche Droite: Tourner à droite<br/>
+        Décollage automatique dès que la vitesse est suffisante<br/>
+        En vol: Flèche Haut: Piquer vers le bas | Flèche Bas: Cabrer vers le haut
     </div>
-    <div id="speed-indicator">Speed: 0</div>
+    <div id="speed-indicator">Vitesse: 0 km/h | Altitude: Au sol</div>
     <canvas id="gameCanvas"></canvas>
 
     <!-- Import Three.js -->
